@@ -2,7 +2,9 @@
 __pycache__/
 
 # Exclude all contents in the /data/ folder
-/data/
+/data/*
+
+!/data/*.py
 
 # Exclude /ckpts and /results folders
 /ckpts/
