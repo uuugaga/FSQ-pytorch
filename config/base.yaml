@@ -1,0 +1,35 @@
+model:
+  image_size: 128
+  in_channels: 3
+  levels: [8,8,8,5,5,5]
+
+training:
+  dataset_name: "FFHQ"
+  data_dir: "../Dataset/ffhq"
+  batch_size: 64
+  epochs: 50
+  num_workers: 4
+  gradient_accumulation_steps: 1
+  recon_weight: 1.0
+  lpips_weight: 1.0
+  adversarial_weight: [0.0, 1.0]
+  warmup_steps: 1000
+  use_scheduler: True
+  use_amp: True
+
+optimizer:
+  name: AdamW8bit
+  lr: 0.001
+  weight_decay: 0.01
+
+logging:
+  log_freq: 10
+  save_freq: 1
+  save_sample_freq: 1000
+
+val:
+  data_dir: "../data/val2017"
+  batch_size: 32
+  num_workers: 4
+  ckpt_path: "../ckpts/FFHQ_128_2025-04-08/weights/checkpoint_epoch37.pt"
+  output_dir: "../results"

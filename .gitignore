@@ -1,0 +1,48 @@
+# Exclude all __pycache__/ folders
+__pycache__/
+
+# Exclude all contents in the /data/ folder
+/data/
+
+# Exclude /ckpts and /results folders
+/ckpts/
+/results/
+
+# Common Python-related ignores
+*.pyc
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environment folders
+venv/
+env/
+.venv/
+.env/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# VS Code settings
+.vscode/
+
+# macOS system files
+.DS_Store
+
+# Windows system files
+Thumbs.db
+
+# Log files
+*.log
+
+# Temporary files
+*.swp
+*.swo
+*~
+
+# Ignore environment variable files
+.env
+.env.*
