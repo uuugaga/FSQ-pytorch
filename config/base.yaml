@@ -4,15 +4,15 @@ model:
   levels: [8,8,8,5,5,5]
 
 training:
-  dataset_name: "FFHQ"
-  data_dir: "../Dataset/ffhq"
+  dataset_name: "ILSVRC2012"
+  data_dir: "../Dataset/ILSVRC2012/train_images"
   batch_size: 64
-  epochs: 50
+  epochs: 40
   num_workers: 4
   gradient_accumulation_steps: 1
   recon_weight: 1.0
   lpips_weight: 1.0
-  adversarial_weight: [0.0, 1.0]
+  adversarial_weight: [0.0, 4.0]
   warmup_steps: 1000
   use_scheduler: True
   use_amp: True
@@ -24,8 +24,8 @@ optimizer:
 
 logging:
   log_freq: 10
-  save_freq: 1
-  save_sample_freq: 1000
+  save_freq: 5
+  save_sample_freq: 10000
 
 val:
   data_dir: "../data/val2017"

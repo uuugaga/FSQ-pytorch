@@ -5,11 +5,10 @@ from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.distributed import DistributedSampler
 import torchvision.transforms as transforms
-from typing import Optional, Callable, List
-import torch.distributed as dist
+from typing import Optional, Callable
 
 
-class FFHQDataset(Dataset):
+class SingleFolderDataset(Dataset):
     """Dataset for loading all images from a folder without labels"""
 
     def __init__(
@@ -26,7 +25,7 @@ class FFHQDataset(Dataset):
         self.file_list = [
             os.path.join(data_dir, f)
             for f in os.listdir(data_dir)
-            if f.endswith(".png") or f.endswith(".jpg")
+            if f.endswith(".png") or f.endswith(".jpg") or f.endswith(".jpeg") or f.endswith(".JPEG")
         ]
 
         print(f"Found {len(self.file_list)} images in {data_dir}")
@@ -79,7 +78,7 @@ def create_dataloader(
 ) -> DataLoader:
 
     # Create dataset
-    dataset = FFHQDataset(
+    dataset = SingleFolderDataset(
         data_dir=data_dir, image_size=image_size, return_filenames=return_filenames
     )
 

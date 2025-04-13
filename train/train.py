@@ -24,7 +24,7 @@ sys.path.insert(0, root_dir)
 
 from model import FSQVAE
 from torchvision.models import convnext_tiny, ConvNeXt_Tiny_Weights
-from data import FFHQDataset
+from data import SingleFolderDataset
 from utils import load_config, WarmupScheduler
 
 
@@ -137,7 +137,7 @@ def main():
         os.makedirs(f"{output_dir}/samples", exist_ok=True)
 
     # Setup dataset and data loader
-    dataset = FFHQDataset(config["training"]["data_dir"], config["model"]["image_size"])
+    dataset = SingleFolderDataset(config["training"]["data_dir"], config["model"]["image_size"])
     sampler = DistributedSampler(
         dataset,
         num_replicas=dist.get_world_size(),
@@ -160,12 +160,10 @@ def main():
     model = FSQVAE(levels=config["model"]["levels"])
 
     # Build discriminator
-    discriminator = convnext_tiny(weights=ConvNeXt_Tiny_Weights.IMAGENET1K_V1).cuda(
-        local_rank
-    )
+    discriminator = convnext_tiny(weights=ConvNeXt_Tiny_Weights.IMAGENET1K_V1)
     discriminator.classifier = nn.Sequential(
         discriminator.classifier[0], discriminator.classifier[1], nn.Linear(768, 2)
-    ).cuda(local_rank)
+    )
 
     # Track codebook usage statistics
     if dist.get_rank() == 0:
@@ -177,6 +175,15 @@ def main():
     model.cuda(local_rank)
     model = DDP(
         model,
+        device_ids=[local_rank],
+        output_device=local_rank,
+        find_unused_parameters=False,
+        broadcast_buffers=False,
+    )
+
+    discriminator.cuda(local_rank)
+    discriminator = DDP(
+        discriminator,
         device_ids=[local_rank],
         output_device=local_rank,
         find_unused_parameters=False,
@@ -222,7 +229,7 @@ def main():
             warmup_steps=config["training"]["warmup_steps"],
             total_steps=total_steps,
             min_lr=0.0,
-            max_lr=config["optimizer"]["lr"],
+            max_lr=config["optimizer"]["lr"] * 0.33,
             decay_type="cosine",
             decay_ratio=0.1,
         )
@@ -300,6 +307,9 @@ def main():
                 scaler_d.step(optimizer_d)
                 scaler_d.update()
 
+                if use_scheduler:
+                    scheduler_d.step()
+
             d_losses.append(d_loss.item() * grad_accum_steps)
 
             # =================== Train Generator (VQVAE) ===================
@@ -311,7 +321,7 @@ def main():
                 recon_images, quant_indices = model(images)
 
                 # Reconstruction losses
-                recon_loss = F.mse_loss(recon_images, images)
+                recon_loss = F.l1_loss(recon_images, images)
                 lpips_loss = lpips_loss_fn(recon_images, images).mean()
 
                 # Adversarial loss - try to fool discriminator
@@ -361,10 +371,8 @@ def main():
                 scaler_g.step(optimizer_g)
                 scaler_g.update()
 
-                # Step schedulers if enabled
                 if use_scheduler:
                     scheduler_g.step()
-                    scheduler_d.step()
 
             # Update progress bar information
             if dist.get_rank() == 0 and (batch_idx + 1) % log_freq == 0:
@@ -399,18 +407,6 @@ def main():
             # Save sample reconstructions
             if dist.get_rank() == 0 and (global_step + 1) % save_images_freq == 0:
                 output_path = f"{output_dir}/samples/recon_step_{global_step + 1}.png"
-                save_sample_reconstructions(
-                    model, images, output_path, use_amp, local_rank
-                )
-
-            global_step += 1
-
-            # Save sample reconstructions
-            if dist.get_rank() == 0 and (global_step + 1) % save_images_freq == 0:
-                output_path = os.path.join(
-                    samples_dir,
-                    f"recon_step_{global_step + 1}.png",
-                )
                 save_sample_reconstructions(
                     model, images, output_path, use_amp, local_rank
                 )
